@@ -1,6 +1,7 @@
 ---
 title: "Analysis and Interpretation of Dynamic Range of HIV Diagnostic Assays for Viral Load monitoring after Antiretroviral Therapy Initiation"
-author: "Dr Joseph B Sempa; [ORCID](https://orcid.org/0000-0003-1062-0417)"
+
+author: "Dr Joseph B Sempa: _Senior lecturer, University of the Free State [ORCID](https://orcid.org/0000-0003-1062-0417)_"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 categories: ["R"]
 tags: ["HIV", "Epidemiology", "Statistics"]
