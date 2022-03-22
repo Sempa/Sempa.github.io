@@ -1,0 +1,66 @@
+
+library(tidyverse)
+library(data.table)
+library(minpack.lm)
+
+.args <- c("~/GitHub/biomarker-growth-curves/outputs/cleaned.rds", "./outputs/lambdas.rds")
+.args <- commandArgs(trailingOnly = T) #Do not run this line when tabing through the code!!!! Erases the prior statements
+
+cleaneddata_path <- .args[1]
+lambdas_expected_output_path <- .args[2]
+
+## cleaning data
+fitting_data <- readRDS("~/GitHub/biomarker-growth-curves/cleaned.rds")
+
+
+Est_lambdas <- function(mdri,assay_TH){
+  # browser()
+  
+  #' Title Hypothetical non-linear model for biomaker growth model
+  #'
+  #' @param asymp prior for asymptote
+  #' @param lambda priors for horizontal scaling
+  #'
+  #' @return nlsm model output
+  #' @export
+  #'
+  #' @examples
+  #' nls.fit(1, 0)
+  nls.fit <- function(asymp, lambda) {
+    modle1 <- nlsLM(result ~ asymp * (1 - exp(-lambda * days_since_eddi)),
+                    data = fitting_data,
+                    start = list(asymp = asymp, lambda = lambda)
+    ) # , verbose = FALSE)
+    return(modle1)
+  }
+  params <- summary(nls.fit(1, 0))
+  
+  ####################################################################################################################
+  #' Evaluating function for a range of informative lambda
+  #' From the basic non-linear model output we obtained a daily rate of lambda and use it to 
+  #' select a range of lambdas spaning 0 to 4 years
+  ### estimating the correct lambda value
+  initial_A <- params$parameters[1, 1]
+  horizontal_scaling <- params$parameters[2, 1]
+  horizontal_scaling_SE <- params$parameters[2, 2]
+  
+  #' Selecting possible values of lambda based on the initial values and SE provided in params
+  #' we generate a table of possible lambdas and expected model outputs, given MDRI and assay recency threshold
+  set.seed(5)
+  possible_lambdas <- sort(rnorm(30, mean = horizontal_scaling, sd = horizontal_scaling_SE))
+  f_lambda_data <- data.frame(matrix(data = NA, nrow = length(possible_lambdas), ncol = 1))
+  names(f_lambda_data)[1] <- "expected_values"
+  counter <- 0
+  for (i in possible_lambdas) {
+    counter <- counter + 1
+    func_lambda <- initial_A * (exp(-i * mdri) - 1) + assay_TH ## 171 is the MDRI for LAg-Sedia. Used a slope generated from a simple linear regression
+    f_lambda_data[counter, ] <- func_lambda[1]
+  }
+  dat_lambda <- cbind(possible_lambdas, f_lambda_data)
+  
+  
+  return(dat_lambda)
+}
+lambdas_expected_output <-Est_lambdas(mdri = 171, assay_TH = 1.5)
+
+saveRDS(lambdas_expected_output, lambdas_expected_output_path)
